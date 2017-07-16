@@ -82,7 +82,7 @@ SredQueueDisc::GetTypeId (void)
                                     Queue::QUEUE_MODE_PACKETS, "QUEUE_MODE_PACKETS"))
     .AddAttribute ("QueueLimit",
                    "Queue limit in bytes/packets",
-                   UintegerValue (25),
+                   UintegerValue (1024),
                    MakeUintegerAccessor (&SredQueueDisc::SetQueueLimit),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("Ns1Compat",
@@ -248,29 +248,39 @@ bool
 SredQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
   NS_LOG_FUNCTION (this << item);
-  Ipv6Header ipHeader;
-  item->GetPacket ()->PeekHeader (ipHeader);
-  uint32_t fid = ipHeader.GetFlowLabel ();
+ // Ipv6Header ipHeader;
+  //item->GetPacket ()->PeekHeader (ipHeader);
+      //  std::cout<<"m_queueLimit"<<m_queueLimit<<"\n";
+       
+ //uint32_t fid = ipHeader.GetFlowLabel();
+ int32_t fid = Classify(item);
+//std::cout<<"fid "<<fid<<"\n";
+ if(fid == -1)
+        {
+            Drop (item);
+          return false;
+        }
   int32_t hit;
   uint32_t nQueued = GetQueueSize ();
-
+  //std::cout<<"nQueued"<<nQueued<<"\n";
   if (m_listSize < M)
-    {
+    { //std::cout<<"inside zombie"<<"GetPacketSize ()"<<std::cout<<item->GetPacketSize ()<<"\n";
       zombielist[m_listSize].fid = fid;
       zombielist[m_listSize].count = 0;
       zombielist[m_listSize].timestamp = Simulator::Now ();
       ++m_listSize;
 
-      if ((GetMode () == Queue::QUEUE_MODE_PACKETS && nQueued >= m_queueLimit)
-          || (GetMode () == Queue::QUEUE_MODE_BYTES && nQueued + item->GetPacketSize () > m_queueLimit))
+      if ((GetMode () == Queue::QUEUE_MODE_PACKETS && nQueued < m_queueLimit)
+          || (GetMode () == Queue::QUEUE_MODE_BYTES && nQueued + item->GetPacketSize () <= m_queueLimit))
         {
+        //  std::cout<<"should enque";
           bool retval = GetInternalQueue (0)->Enqueue (item);
           return retval;
 
         }
       else
         {
-
+          //std::cout<<"drp1\n";
           Drop (item);
           return false;
         }
@@ -320,7 +330,7 @@ SredQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
     {
 
       /* drop the packet */
-
+       // std::cout<<"drp2\n";
       Drop (item);
       return false;
     }
@@ -331,6 +341,7 @@ SredQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
         {
 
           // drop
+      // std::cout<<"drp3\n";
           Drop (item);
           return false;
 
@@ -372,9 +383,9 @@ SredQueueDisc::CheckConfig (void)
       return false;
     }
 
-  if (GetNPacketFilters () > 0)
+  if (GetNPacketFilters () == 0)
     {
-      NS_LOG_ERROR ("SredQueueDisc cannot have packet filters");
+      NS_LOG_ERROR ("SredQueueDisc needs atleast one packet filter");
       return false;
     }
 
@@ -401,7 +412,7 @@ SredQueueDisc::CheckConfig (void)
 
   if (GetInternalQueue (0)->GetMode () != m_mode)
     {
-      NS_LOG_ERROR ("The mode of the provided queue does not match the mode set on the RedQueueDisc");
+      NS_LOG_ERROR ("The mode of the provided queue does not match the mode set on the SredQueueDisc");
       return false;
     }
 

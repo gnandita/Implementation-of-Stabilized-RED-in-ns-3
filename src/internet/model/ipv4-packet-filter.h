@@ -76,6 +76,7 @@ private:
   uint32_t m_perturbation; //!< hash perturbation value
 };
 
+
 } // namespace ns3
 
 #endif /* IPV4_PACKET_FILTER */

@@ -64,7 +64,7 @@ class TraceContainer;
 
 struct zombie
 {
-  uint32_t fid;         /* flow identifier */
+  int32_t fid;         /* flow identifier */
   uint32_t count;       /* count of pkts of this flow in this zombie */
   Time timestamp;
 };
@@ -95,6 +95,7 @@ public:
    * Destructor
    */
   virtual ~SredQueueDisc ();
+ 
 
   /**
    * \brief Set the operating mode of this queue.
